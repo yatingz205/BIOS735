@@ -1,0 +1,194 @@
+---
+title: "Homework 1 - readable and efficient R code"
+author: "Yating Zou"
+date: "`r format(Sys.time(), '%m/%d/%Y')`"
+output: html_document
+---
+
+```{r}
+# Load packages needed
+library(microbenchmark)
+```
+
+# Question 1 - "function-alize" this code
+
+Read over the code below and perform the following:
+
+* Wrap it into a function `foobar0` which has arguments `x` and `z`
+  and which returns the vector `x` at the end of the following code.
+* Rewrite this into a function `foobar` which is easier to read, by
+  reducing repetitive code. E.g. `foobar` might call a function to
+  check the input, and another function to perform the three lines of
+  computation. 
+* Check that the two versions produce the same output using the
+  function `all.equal`.
+
+```{r}
+# Function foobar0 =================================
+foobar0 <- function(x, z){
+  
+  if (sum(x >= .001) < 1) {
+    stop("step 1 requires 1 observation(s) with value >= .001")
+  }
+  fit <- lm(x ~ z)
+  r <- fit$residuals
+  x <- sin(r) + .01
+  
+  if (sum(x >= .002) < 2) {
+    stop("step 2 requires 2 observation(s) with value >= .002")
+  }
+  fit <- lm(x ~ z)
+  r <- fit$residuals
+  x <- 2 * sin(r) + .02
+  
+  if (sum(x >= .003) < 3) {
+    stop("step 3 requires 3 observation(s) with value >= .003")
+  }
+  fit <- lm(x ~ z)
+  r <- fit$residuals
+  x <- 3 * sin(r) + .03
+  
+  if (sum(x >= .004) < 4) {
+    stop("step 4 requires 4 observation(s) with value >= .004")
+  }
+  fit <- lm(x ~ z)
+  r <- fit$residuals
+  x <- 4 * sin(r) + .04
+
+return(x)
+}
+
+
+# Function foobar =================================
+
+## helper function for checking the input
+check_input <- function(x, c){
+  if (sum(x >= c/10^3) < c){
+    stop(cat("step", c, "requires",c, "observation(s) with value >=", c/10^3))
+  }
+}
+
+## helper function for computing x at step c
+compute <- function(x, z, c) {
+  fit <- lm(x ~ z)
+  r <- fit$residuals
+  x <- c * sin(r) + c / 10 ^ 2
+  return(x)
+}
+
+# main function foobar
+foobar <- function(x, z) {
+  for (c in 1:4) {
+    check_input(x, c)
+    x <- compute(x, z, c)
+  }
+  return(x)
+}
+```
+
+Check if `foobar0()` and `foobar()` are equal using `base::all.equal()`.
+```{r}
+set.seed(1)
+x <- rnorm(100)
+z <- rnorm(100)
+
+all.equal(foobar0(x, z), foobar(x, z))
+```
+
+
+# Question 2 - vectorize this code and benchmark
+
+* Take the following function `f0` and rewrite it as a function `f`,
+  which is faster and easier to read, by removing the loop of `i` from
+  1 to `m`.
+* Benchmark `f` and `f0` using `microbenchmark`. How much faster is `f`?
+
+```{r}
+# Function using for-loop ==============================
+f0 <- function(x, b, a) {
+  out <- numeric(0)
+  for (i in seq_len(m)) {
+    bb <- b[i,]
+    aa <- a[i,]
+    out <- c(out, sum(x %*% bb) + sum(aa))
+  }
+  out
+}
+
+
+# Function using vectors ================================
+f <- function(x, b, a) {
+  out <- colSums(x %*% t(b)) + rowSums(a)
+  out
+}
+```
+
+Benchmark `f0()` and `f()` using `microbenchmark::microbenchmark()`.
+
+```{r}
+n <- 30
+p <- 50
+p2 <- 25
+m <- 1000
+set.seed(1)
+x <- matrix(rnorm(n * p), nrow = n, ncol = p)
+b <- matrix(rnorm(m * p), nrow = m, ncol = p)
+a <- matrix(rnorm(m * p2), nrow = m, ncol = p2)
+
+microbenchmark(f0(x, b, a), f(x, b, a))
+```
+
+The run-time of `f0()` is `r round(5.9/1.556,2)` times that of `f()` on average.
+
+
+# Question 3 - build a faster t-test
+
+* Rewrite the following function `getT0` which computes `m`
+  two-sample t-tests (equal variance) between two groups as a function
+  `getT`, which is faster by using vectorized operations over the `m`
+  sets of observations. (There are functions in R packages, such as
+  `genefilter::rowttests` which will quickly perform this operation,
+  but I want you to write your own function using simple R functions
+  like `rowSums`, etc.)
+* Benchmark `getT` and `getT0`. How much faster is `getT`?
+
+```{r}
+# Function using sapply ===============================
+getT0 <- function(x, f) {
+  ts <-
+    sapply(seq_len(m), function(i)
+      t.test(x[i, ] ~ f, var.equal = TRUE)$statistic)
+  unname(ts)
+}
+
+
+# Function using vectorization =========================
+getT <- function(x, f) {
+  n1 <- sum(f == 1)
+  n2 <- sum(f == 2)
+  s1.squareds <- rowSums((x[f == 1,] - rowMeans(x[f == 1, ])) ^ 2)
+  s2.squareds <- rowSums((x[f == 2,] - rowMeans(x[f == 2, ])) ^ 2)
+  
+  diffs <- rowMeans(x[f == 1, ]) - rowMeans(x[f == 2, ])
+  s.squareds <-
+    ((n1 - 1) * s1.squareds + (n2 - 1) * s2.squareds) / (n1 + n2 - 2)
+  
+  ts <- diffs / sqrt(2 * s.squareds / little.n)
+  ts
+}
+```
+
+Benchmark `getT0()` and `getT()` using `microbenchmark::microbenchmark()`.
+```{r}
+m <- 400
+n <- 50
+little.n <- n / 2
+set.seed(1)
+x <- matrix(rnorm(m * n), nrow = m, ncol = n)
+f <- gl(2, little.n)
+
+microbenchmark(getT0(x, f), getT(x, f))
+```
+
+The run-time of `getT0()` is `r round(172660/867, 2)` times that of `getT()` on average.
+
