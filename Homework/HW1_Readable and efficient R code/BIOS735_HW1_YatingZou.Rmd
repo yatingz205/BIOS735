@@ -135,10 +135,11 @@ x <- matrix(rnorm(n * p), nrow = n, ncol = p)
 b <- matrix(rnorm(m * p), nrow = m, ncol = p)
 a <- matrix(rnorm(m * p2), nrow = m, ncol = p2)
 
+all.equal(f0(x, b, a), f(x, b, a))
 microbenchmark(f0(x, b, a), f(x, b, a))
 ```
 
-The run-time of `f0()` is `r round(5.9/1.556,2)` times that of `f()` on average.
+The run-time of `f0()` is `r round(5843.436/1410.328,2)` times that of `f()` on average.
 
 
 # Question 3 - build a faster t-test
@@ -186,9 +187,9 @@ set.seed(1)
 x <- matrix(rnorm(m * n), nrow = m, ncol = n)
 f <- gl(2, little.n)
 
-library(microbenchmark)
+all.equal(getT0(x, f), getT(x, f))
 microbenchmark(getT0(x, f), getT(x, f))
 ```
 
-The run-time of `getT0()` is `r round(172660/867, 2)` times that of `getT()` on average.
+The run-time of `getT0()` is `r round(141611.3498/427.6366, 2)` times that of `getT()` on average.
 
