@@ -11,7 +11,7 @@
 
 <meta name="author" content="Yating Zou" />
 
-<meta name="date" content="2024-01-19" />
+<meta name="date" content="2024-01-26" />
 
 <title>Homework 1 - readable and efficient R code</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">Homework 1 - readable and efficient R
 code</h1>
 <h4 class="author">Yating Zou</h4>
-<h4 class="date">01/19/2024</h4>
+<h4 class="date">01/26/2024</h4>
 
 </div>
 
@@ -480,14 +480,16 @@ x &lt;- matrix(rnorm(n * p), nrow = n, ncol = p)
 b &lt;- matrix(rnorm(m * p), nrow = m, ncol = p)
 a &lt;- matrix(rnorm(m * p2), nrow = m, ncol = p2)
 
-microbenchmark(f0(x, b, a), f(x, b, a))</code></pre>
+all.equal(f0(x, b, a), f(x, b, a))</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>microbenchmark(f0(x, b, a), f(x, b, a))</code></pre>
 <pre><code>## Warning in microbenchmark(f0(x, b, a), f(x, b, a)): less accurate nanosecond
 ## times to avoid potential integer overflows</code></pre>
 <pre><code>## Unit: microseconds
-##         expr      min       lq     mean   median       uq       max neval cld
-##  f0(x, b, a) 4560.307 4783.941 5377.591 4886.626 5028.506 13688.465   100  a 
-##   f(x, b, a)  990.724 1036.275 1346.826 1060.957 1113.847  8164.371   100   b</code></pre>
-<p>The run-time of <code>f0()</code> is 3.79 times that of
+##         expr      min       lq     mean   median       uq      max neval cld
+##  f0(x, b, a) 4610.901 4898.516 5516.976 4974.140 5093.512 17217.01   100  a 
+##   f(x, b, a)  999.949 1051.445 1387.751 1081.949 1126.700  8569.00   100   b</code></pre>
+<p>The run-time of <code>f0()</code> is 4.14 times that of
 <code>f()</code> on average.</p>
 </div>
 <div id="question-3---build-a-faster-t-test" class="section level1">
@@ -517,34 +519,35 @@ getT0 &lt;- function(x, f) {
 getT &lt;- function(x, f) {
   n1 &lt;- sum(f == 1)
   n2 &lt;- sum(f == 2)
-  s1.squareds &lt;- rowSums((x[f == 1,] - rowMeans(x[f == 1, ])) ^ 2)
-  s2.squareds &lt;- rowSums((x[f == 2,] - rowMeans(x[f == 2, ])) ^ 2)
+  s1.squareds &lt;- rowSums((x[,f == 1] - rowMeans(x[,f == 1]))^2)
+  s2.squareds &lt;- rowSums((x[,f == 2] - rowMeans(x[,f == 2]))^2)
   
-  diffs &lt;- rowMeans(x[f == 1, ]) - rowMeans(x[f == 2, ])
-  s.squareds &lt;-
-    ((n1 - 1) * s1.squareds + (n2 - 1) * s2.squareds) / (n1 + n2 - 2)
+  diffs &lt;- rowMeans(x[, f == 1]) - rowMeans(x[, f == 2])
+  s.squareds &lt;- (s1.squareds + s2.squareds)/(n1 + n2 - 2)
   
-  ts &lt;- diffs / sqrt(2 * s.squareds / little.n)
+  ts &lt;- diffs / sqrt(2*s.squareds/n1)
   ts
 }</code></pre>
 <p>Benchmark <code>getT0()</code> and <code>getT()</code> using
 <code>microbenchmark::microbenchmark()</code>.</p>
 <pre class="r"><code>m &lt;- 400
 n &lt;- 50
-little.n &lt;- n / 2
+little.n &lt;- n/2
 set.seed(1)
 x &lt;- matrix(rnorm(m * n), nrow = m, ncol = n)
 f &lt;- gl(2, little.n)
 
-microbenchmark(getT0(x, f), getT(x, f))</code></pre>
+all.equal(getT0(x, f), getT(x, f))</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>microbenchmark(getT0(x, f), getT(x, f))</code></pre>
 <pre><code>## Unit: microseconds
-##         expr       min         lq        mean    median          uq       max
-##  getT0(x, f) 126224.20 132467.864 141762.6365 135016.96 143629.7445 251372.80
-##   getT(x, f)    307.09    354.814    838.9297    384.17    493.8655  10286.82
+##         expr        min          lq        mean    median         uq        max
+##  getT0(x, f) 126968.595 130844.0175 138140.7178 133423.90 136725.755 245629.811
+##   getT(x, f)    300.776    344.1745    467.4623    362.03    400.324   2281.855
 ##  neval cld
 ##    100  a 
 ##    100   b</code></pre>
-<p>The run-time of <code>getT0()</code> is 199.15 times that of
+<p>The run-time of <code>getT0()</code> is 331.15 times that of
 <code>getT()</code> on average.</p>
 </div>
 
