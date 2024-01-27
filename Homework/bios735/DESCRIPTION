@@ -1,0 +1,13 @@
+Package: bios735
+Title: BIOS 735
+Version: 0.0.0.9000
+Authors@R: 
+    person("Yating", "Zou", ,"yating@live.unc.edu", role = c("aut", "cre"))
+Description: This package is build under the instruction of Homework 2, BIOS 735 and for the purpose of course excercises.
+License: GPL-2
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.0
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
